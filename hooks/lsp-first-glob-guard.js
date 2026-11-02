@@ -156,8 +156,7 @@ function isCodeSymbol(raw) {
 
   // Now the actual symbol detection:
   const isCamelCase    = /^[a-z][a-zA-Z0-9]{3,}$/.test(s) && /[A-Z]/.test(s);
-  // Needs an interior capital/digit: skips plain words (Tests, Status, Files).
-  const isPascalCase   = /^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(s) && /[A-Z0-9]/.test(s.slice(1));
+  const isPascalCase   = /^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(s);
   const isSnakeCaseFn  = /^[a-z]+(_[a-z]+){2,}$/.test(s) && s.length >= 9;
 
   return isCamelCase || isPascalCase || isSnakeCaseFn;

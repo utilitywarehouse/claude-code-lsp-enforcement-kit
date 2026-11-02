@@ -5,7 +5,7 @@ All notable changes to the LSP Enforcement Kit. Format based on [Keep a Changelo
 ## [Unreleased]
 
 ### Fixed
-- **False-positive blocks on plain capitalised words.** The PascalCase symbol heuristic in `bash-grep-block.js`, `lsp-first-guard.js` and `lsp-first-glob-guard.js` matched any capitalised word of 4+ letters (`Tests`, `Status`, `Expected`, `Files`, `Waiting`). It now requires an interior capital or digit, so `UserService` and `rpeBackoff` still block while single English words pass. Trade-off: single-word PascalCase type names (e.g. `Exercise`) are no longer flagged.
+- **False-positive blocks in `bash-grep-block.js`.** Greps that filter piped command output (`npx vitest ... 2>&1 | grep "Tests"`) are no longer treated as symbol searches, since they read a pipe and not code. A short list of output/doc words (`Tests`, `Files`, `Status`, `Expected`, `Received`, `Passed`, `Failed`, `Waiting`, `Blocked`, `Duration`) is also skipped. Single-word type names such as `Account` or `Transaction` still block.
 
 ## [2.3.2] — 2026-04-14
 

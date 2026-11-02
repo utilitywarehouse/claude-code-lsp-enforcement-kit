@@ -13,8 +13,35 @@ const { buildSuggestion, buildStructuredBlockResponse, classifySymbolShape, REQU
 // bypass ASCII regex symbol detection.
 const ZERO_WIDTH = /[\u00AD\u200B-\u200F\u2060-\u2064\uFEFF]/g;
 
+// Plain words that show up in test-runner output and docs. Single-word type
+// names (Account, Transaction) must still count as symbols, so this stays a
+// short list of output/doc vocabulary rather than a rule about word shape.
+const OUTPUT_WORDS = /^(Tests?|Files?|Status|Expected|Received|Passed|Failed|Waiting|Blocked|Duration)$/;
+
+// True when every grep/rg/ag/ack in the command reads a pipe instead of
+// files (`... | grep "Tests"`). That filters command output, so there is no
+// code symbol to look up.
+function onlyFiltersPipedOutput(cmd) {
+  const stripped = cmd.replace(/"[^"]*"|'[^']*'/g, 'Q');
+  const segments = stripped.split(/\|(?!\|)/);
+  let greps = 0;
+  for (let i = 0; i < segments.length; i++) {
+    const m = segments[i].match(/(?:^|[\s;&(])(?:rtk\s+(?:proxy\s+)?)?(?:grep|rg|ag|ack)\b(.*)$/i);
+    if (!m) continue;
+    greps++;
+    if (i === 0) return false;
+    let tokens = m[1].replace(/\d*>&?\S*/g, '').split(/\s+/).filter(Boolean)
+      .filter(t => !t.startsWith('-') && !/^\d+$/.test(t));
+    if (!tokens.includes('Q')) tokens = tokens.slice(1);
+    tokens = tokens.filter(t => t !== 'Q');
+    if (tokens.length > 0) return false;
+  }
+  return greps > 0;
+}
+
 function looksLikeBareSymbol(p) {
   if (p.length < 4 || /\s/.test(p)) return false;
+  if (OUTPUT_WORDS.test(p)) return false;
   const skip = [
     /^(TODO|FIXME|HACK|XXX|NOTE)/i,
     /^console\b/, /^import\b/, /^export\b/, /^http/i, /^\d/,
@@ -25,8 +52,7 @@ function looksLikeBareSymbol(p) {
   if (skip.some(rx => rx.test(p))) return false;
 
   return (/^[a-z][a-zA-Z0-9]{3,}$/.test(p) && /[A-Z]/.test(p)) ||
-         // PascalCase needs an interior capital/digit: skips plain words (Tests, Status, Files).
-         (/^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(p) && /[A-Z0-9]/.test(p.slice(1))) ||
+         /^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(p) ||
          (/^[a-z]+(_[a-z]+){2,}$/.test(p) && p.length >= 9);
 }
 
@@ -51,6 +77,7 @@ process.stdin.on('end', () => {
   const isSearchLike = /\b(grep|rg|ag|ack)\b/i.test(cmd) || /\bsed\s+-n\b/i.test(cmd) || /\bawk\b/i.test(cmd);
   if (!isSearchLike) process.exit(0);
   if (/\bgit\s+grep\b/i.test(cmd)) process.exit(0);
+  if (onlyFiltersPipedOutput(cmd)) process.exit(0);
   if (/(?:^|[\/\\])(?:supabase[\/\\]migrations|\.task|\.claude|node_modules|knowledge-vault)(?:[\/\\]|$)/i.test(cmd)) process.exit(0);
   if (/--include=?\S*\.(sql|md|json|yaml|yml|txt|env|sh|css|scss|log)\b/i.test(cmd)) process.exit(0);
 
