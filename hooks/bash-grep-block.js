@@ -25,7 +25,8 @@ function looksLikeBareSymbol(p) {
   if (skip.some(rx => rx.test(p))) return false;
 
   return (/^[a-z][a-zA-Z0-9]{3,}$/.test(p) && /[A-Z]/.test(p)) ||
-         /^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(p) ||
+         // PascalCase needs an interior capital/digit: skips plain words (Tests, Status, Files).
+         (/^[A-Z][a-zA-Z][a-zA-Z0-9]{2,}$/.test(p) && /[A-Z0-9]/.test(p.slice(1))) ||
          (/^[a-z]+(_[a-z]+){2,}$/.test(p) && p.length >= 9);
 }
 
